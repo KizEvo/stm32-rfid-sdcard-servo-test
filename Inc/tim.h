@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+void TIM_PWM_InitConfig(void);
+
 void delayMs(uint32_t time);
 void startTimeOutMs(uint32_t time);
 void endTimeOutMs(void);

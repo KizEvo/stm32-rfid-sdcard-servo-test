@@ -10,14 +10,14 @@
 
 #include "spi.h"
 #include "tim.h"
-#include "stm32f10x.h"                  // Device header
-#include "stm32f10x_gpio.h"             // Keil::Device:StdPeriph Drivers:GPIO
-#include "stm32f10x_spi.h"              // Keil::Device:StdPeriph Drivers:SPI
+#include "stm32f10x.h" // Device header
+#include "stm32f10x_gpio.h" // Keil::Device:StdPeriph Drivers:GPIO
+#include "stm32f10x_spi.h" // Keil::Device:StdPeriph Drivers:SPI
 
 
 /* ============================================================================
  *
- * Setup SPI1 in Master mode on AHB2 bus.
+ * Setup SPI1 in Master mode on APB2 bus.
  * Baud rate prescaler = 8, Data size is 8 bits and MSB is sent first 
  *
  * ============================================================================
@@ -30,21 +30,20 @@ void SPI_InitConfig(void)
 	// Config IO for SPI1 peripheral
 	GPIO_InitTypeDef SPI1_NSS, SPI1_SCK, SPI1_MOSI, SPI1_MISO;
 	
-	SPI1_NSS.GPIO_Mode	= GPIO_Mode_Out_PP;
-	SPI1_NSS.GPIO_Pin		= GPIO_Pin_4;
+	SPI1_NSS.GPIO_Mode = GPIO_Mode_Out_PP;
+	SPI1_NSS.GPIO_Pin	= GPIO_Pin_4;
 	SPI1_NSS.GPIO_Speed = GPIO_Speed_10MHz;
 		
-	SPI1_SCK.GPIO_Mode	= GPIO_Mode_AF_PP;
-	SPI1_SCK.GPIO_Pin		= GPIO_Pin_5;
+	SPI1_SCK.GPIO_Mode = GPIO_Mode_AF_PP;
+	SPI1_SCK.GPIO_Pin	= GPIO_Pin_5;
 	SPI1_SCK.GPIO_Speed = GPIO_Speed_50MHz;
 
-	SPI1_MISO.GPIO_Mode		= GPIO_Mode_IN_FLOATING;
-	SPI1_MISO.GPIO_Pin		= GPIO_Pin_6;
-	SPI1_MISO.GPIO_Speed	= GPIO_Speed_10MHz;
+	SPI1_MISO.GPIO_Mode	= GPIO_Mode_IN_FLOATING;
+	SPI1_MISO.GPIO_Pin = GPIO_Pin_6;
 	
-	SPI1_MOSI.GPIO_Mode		= GPIO_Mode_AF_PP;
-	SPI1_MOSI.GPIO_Pin		= GPIO_Pin_7;
-	SPI1_MOSI.GPIO_Speed	= GPIO_Speed_50MHz;
+	SPI1_MOSI.GPIO_Mode = GPIO_Mode_AF_PP;
+	SPI1_MOSI.GPIO_Pin = GPIO_Pin_7;
+	SPI1_MOSI.GPIO_Speed = GPIO_Speed_50MHz;
 	
 	GPIO_Init(GPIOA, &SPI1_NSS);
 	GPIO_Init(GPIOA, &SPI1_SCK);
@@ -53,14 +52,14 @@ void SPI_InitConfig(void)
 	
 	// Setup SPI1 parameters
 	SPI_InitTypeDef SPI1_Reg;
-	SPI1_Reg.SPI_BaudRatePrescaler	= SPI_BaudRatePrescaler_8;
-	SPI1_Reg.SPI_CPHA								= SPI_CPHA_1Edge;
-	SPI1_Reg.SPI_CPOL								= SPI_CPOL_Low;
-	SPI1_Reg.SPI_DataSize						= SPI_DataSize_8b;
-	SPI1_Reg.SPI_FirstBit						= SPI_FirstBit_MSB;
-	SPI1_Reg.SPI_Mode								= SPI_Mode_Master;
-	SPI1_Reg.SPI_Direction					= SPI_Direction_2Lines_FullDuplex;
-	SPI1_Reg.SPI_NSS								= SPI_NSS_Soft;
+	SPI1_Reg.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
+	SPI1_Reg.SPI_CPHA = SPI_CPHA_1Edge;
+	SPI1_Reg.SPI_CPOL = SPI_CPOL_Low;
+	SPI1_Reg.SPI_DataSize = SPI_DataSize_8b;
+	SPI1_Reg.SPI_FirstBit = SPI_FirstBit_MSB;
+	SPI1_Reg.SPI_Mode	= SPI_Mode_Master;
+	SPI1_Reg.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+	SPI1_Reg.SPI_NSS = SPI_NSS_Soft;
 	
 	SPI_Init(SPI1, &SPI1_Reg);
 	SPI_Cmd(SPI1, ENABLE);
