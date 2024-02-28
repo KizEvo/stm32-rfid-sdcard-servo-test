@@ -24,8 +24,8 @@
  */
 void SPI_InitConfig(void)
 {
-	// Turn on SPI1, GPIOA clock
-	RCC->APB2ENR |= (RCC_APB2ENR_SPI1EN | RCC_APB2ENR_IOPAEN); // SPI and GPIOA4, NSS pin
+	// Turn on SPI1
+	RCC->APB2ENR |= RCC_APB2ENR_SPI1EN; // SPI 
 	
 	// Config IO for SPI1 peripheral
 	GPIO_InitTypeDef SPI1_NSS, SPI1_SCK, SPI1_MOSI, SPI1_MISO;

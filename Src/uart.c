@@ -22,7 +22,6 @@ void UART_InitConfig(uint32_t baudRate)
 {
 	// Turn on UART clock
 	RCC->APB2ENR |= (RCC_APB2ENR_USART1EN);
-	RCC->APB2ENR |= (RCC_APB2ENR_IOPAEN);
 
 	// Setup IO pins for UART
 	GPIO_InitTypeDef TX, RX;

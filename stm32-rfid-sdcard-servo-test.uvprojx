@@ -404,6 +404,11 @@
               <FileType>1</FileType>
               <FilePath>.\Src\tim.c</FilePath>
             </File>
+            <File>
+              <FileName>mfrc522.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Src\mfrc522.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
