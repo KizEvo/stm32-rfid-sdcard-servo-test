@@ -196,11 +196,11 @@ uint8_t MFRC522_PICC_Communication(uint8_t command, uint8_t xIRq, uint8_t *sendV
 	MFRC522_WriteByteReg(FIFOLevelReg, 0x80); // Flush FIFO register
 	MFRC522_WriteStreamReg(FIFODataReg, sendValStream, *sendValLen); // Write stream to FIFO register (total 64 bytes)
 	MFRC522_WriteByteReg(BitFramingReg, bitFraming); // Config bit frame for transmission and reception
-	MFRC522_WriteByteReg(CommandReg, Transceive); // Execute the command
+	MFRC522_WriteByteReg(CommandReg, command); // Execute the command
 
 	if(command == Transceive) // Transmission of data start, need to activate bit 7th of BitFramingReg if command is Transceive to start sending data to PICC
 	{
-		MFRC522_WriteByteReg(BitFramingReg, 0x80);
+		MFRC522_SetRegisterBitMask(BitFramingReg, 0x80);
 	}
 	
 	startTimeOutMs(25); // Wait 25ms at the end of transmission (because we set the TAuto bit in TModeReg) for other command to complete
