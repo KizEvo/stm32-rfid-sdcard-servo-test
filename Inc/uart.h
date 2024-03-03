@@ -5,6 +5,6 @@
 #include "stm32f10x.h"
 
 void UART_InitConfig(uint32_t baudRate);
-void UART_TransmitByte(USART_TypeDef *USARTx, char byte);
+void UART_TransmitByte(USART_TypeDef *USARTx, uint8_t byte);
 
 #endif

@@ -1,6 +1,8 @@
 #ifndef MFRC522_H
 #define MFRC522_H
 
+#include <stdint.h>
+
 //------------------MFRC522 Register---------------
 //Page 0:Command and Status
 #define     Reserved00            0x00
@@ -71,9 +73,54 @@
 #define     Reserved33            0x3E
 #define     Reserved34            0x3F
 
+// MFRC522 Commands
+#define			Idle									0x00
+#define			Mem										0x01
+#define			GenerateRandomID			0x02
+#define			CalcCRC								0x03
+#define			Transmit							0x04
+#define			NoCmdChange						0x07
+#define			Receive								0x08
+#define			Transceive						0x0C
+#define			MFAuthent							0x0E
+#define			SoftReset							0x0F
+
+enum PICC_TYPE {PICC_TYPE_NOT_COMPLETE, 
+                PICC_TYPE_UNKNOWN, 
+                PICC_TYPE_MIFARE_MINI, 
+                PICC_TYPE_MIFARE_1K, 
+                PICC_TYPE_MIFARE_4K, 
+                PICC_TYPE_MIFARE_UL, 
+                PICC_TYPE_MIFARE_PLUS, 
+                PICC_TYPE_TNP3XXX, 
+                PICC_TYPE_ISO_14443_4, 
+                PICC_TYPE_ISO_18092};
+
+typedef enum PICC_TYPE PICC_TYPE;
+								
+typedef struct {
+	uint8_t uidByte[10]; // Number of bytes in the UID (4, 7 or 10), Section 6.4.4 ISO-IEC 14443-3_E
+	uint8_t size; // Size in number
+	uint8_t sak; // The SAK (Select acknowledge) byte returned from the PICC after successful selection.
+} UID;
+
+// MCU to PCD (MFRC522) communication function prototypes
 void MFRC522_Init(void);
-void MFRC522_WriteByteReg(char regAddr, char valueToWrite);
-void MFRC522_WriteStreamReg(char regAddr, char *valueStream, char streamLen);
-char MFRC522_ReadByteReg(char regAddr);
+void MFRC522_WriteByteReg(uint8_t regAddr, uint8_t valueToWrite);
+void MFRC522_WriteStreamReg(uint8_t regAddr, uint8_t *valueStream, uint8_t streamLen);
+void MFRC522_SetRegisterBitMask(uint8_t regAddr, uint8_t bitmask);
+void MFRC522_ClearRegisterBitMask(uint8_t regAddr, uint8_t bitmask);
+uint8_t MFRC522_CalculateCRC(uint8_t *valueStream, uint8_t streamLen, uint8_t *result);
+uint8_t MFRC522_ReadByteReg(uint8_t regAddr);
+void MFRC522_ReadStreamReg(uint8_t regAddr, uint8_t *valueStream, uint8_t streamLen);
+// PCD to PICC (contactless card) communication function prototypes
+uint8_t MFRC522_PICC_Communication(uint8_t command, uint8_t xIRq, uint8_t *sendValStream, uint8_t *sendValLen, uint8_t *receiveValStream, uint8_t *receiveValLen, uint8_t *validBits, uint8_t rxAlign);
+uint8_t MFRC522_PICC_TransceiveData(uint8_t *sendValStream, uint8_t *sendValLen, uint8_t *receiveValStream, uint8_t *receiveValLen, uint8_t *validBits, uint8_t rxAlign);
+uint8_t MFRC522_PICC_RequestA(uint8_t *bufferATQA, uint8_t *bufferSize);
+uint8_t MFRC522_PICC_Select(UID *uid);
+uint8_t MFRC522_PICC_IsNewCardPresent(void);
+uint8_t MFRC522_PICC_SelectCard(UID *mfrc522);
+void MFRC522_PICC_TestSignal(uint8_t *bufferOut);
+PICC_TYPE MFRC522_GetType(uint8_t sak);
 
 #endif

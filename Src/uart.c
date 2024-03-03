@@ -42,7 +42,7 @@ void UART_InitConfig(uint32_t baudRate)
 	UART1_Reg.USART_Mode = USART_Mode_Tx | USART_Mode_Tx;
 	UART1_Reg.USART_Parity = USART_Parity_No;
 	UART1_Reg.USART_StopBits = USART_StopBits_1;
-	UART1_Reg.USART_WordLength = USART_WordLength_8b;
+	UART1_Reg.USART_WordLength = USART_WordLength_9b;
 	
 	USART_Cmd(USART1, ENABLE);
 	USART_Init(USART1, &UART1_Reg);
@@ -56,7 +56,7 @@ void UART_InitConfig(uint32_t baudRate)
  * 
  * ============================================================================
  */
-void UART_TransmitByte(USART_TypeDef *USARTx, char byte)
+void UART_TransmitByte(USART_TypeDef *USARTx, uint8_t byte)
 {
 	USARTx->DR = byte;
 	

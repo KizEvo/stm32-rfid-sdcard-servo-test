@@ -8,6 +8,7 @@
  * ============================================================================
  */
 
+#include <stdint.h>
 #include "spi.h"
 #include "tim.h"
 #include "stm32f10x.h" // Device header
@@ -72,7 +73,7 @@ void SPI_InitConfig(void)
  *
  * ============================================================================
  */
-void SPI_TransmitByte(SPI_TypeDef *SPIx, char byte)
+void SPI_TransmitByte(SPI_TypeDef *SPIx, uint8_t byte)
 {
 	SPIx->DR = byte;
 	
@@ -87,7 +88,7 @@ void SPI_TransmitByte(SPI_TypeDef *SPIx, char byte)
  *
  * ============================================================================
  */
-uint8_t SPI_ReceiveByte(SPI_TypeDef *SPIx, char *byte, uint16_t timeout)
+uint8_t SPI_ReceiveByte(SPI_TypeDef *SPIx, uint8_t *byte, uint16_t timeout)
 {
 	uint8_t returnStatus;
 	startTimeOutMs(timeout);

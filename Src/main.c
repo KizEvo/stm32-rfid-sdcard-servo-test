@@ -37,13 +37,14 @@ int main(void)
 	
 	GPIO_Init(GPIOC, &ledRed);
 
-	GPIO_WriteBit(GPIOC, ledRed.GPIO_Pin, Bit_RESET);
-	char result;
+	GPIO_WriteBit(GPIOC, ledRed.GPIO_Pin, Bit_RESET);	
+	
+	//volatile uint8_t check;
+	//UID mfrc522 = {};
+	uint8_t bufferTestIn[64] = {0x00};
+	MFRC522_PICC_TestSignal(bufferTestIn);
 	while(1)
 	{
-		result = MFRC522_ReadByteReg(VersionReg);
-		UART_TransmitByte(USART1, result);
-		delayMs(200);
 	}
 }
 
