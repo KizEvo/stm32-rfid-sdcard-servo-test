@@ -39,13 +39,16 @@ int main(void)
 
 	GPIO_WriteBit(GPIOC, ledRed.GPIO_Pin, Bit_RESET);	
 	
-	volatile uint8_t check = 0;
 	UID mfrc522 = {};
+	volatile uint8_t check = 0;
 	while(1)
 	{
 		if(MFRC522_PICC_IsNewCardPresent() == UINT8_MAX)
 		{
-			check = 1;
+				if(MFRC522_PICC_Select(&mfrc522) == UINT8_MAX)
+				{
+					check = 1;
+				}
 		}
 	}
 }
