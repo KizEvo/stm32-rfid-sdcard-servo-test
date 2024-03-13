@@ -47,7 +47,16 @@ int main(void)
 		{
 				if(MFRC522_PICC_Select(&mfrc522) == UINT8_MAX)
 				{
-					check = 1;
+					UART_WriteString(USART1, "UID (in decimal): ");
+					for(uint8_t i = 0; i < mfrc522.size; i++)
+					{
+						UART_WriteNumberInt(USART1, mfrc522.uidByte[i]);
+						UART_WriteString(USART1, " ");
+					}
+					UART_WriteString(USART1, "                  ");
+					UART_WriteString(USART1, "Size: ");
+					UART_WriteNumberInt(USART1, mfrc522.size);
+					UART_WriteString(USART1, "                  ");
 				}
 		}
 	}
