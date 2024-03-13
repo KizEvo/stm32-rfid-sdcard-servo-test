@@ -92,6 +92,7 @@ void MFRC522_WriteStreamReg(uint8_t regAddr, uint8_t *valueStream, uint8_t strea
 	for(uint8_t i = 0; i < streamLen; i++)
 	{
 		SPI_TransmitByte(SPI1, valueStream[i]);
+		for(volatile uint8_t j = 0; j < UINT8_MAX; j++);
 	}
 	// NSS pin, pulled high to disable slave
 	GPIO_WriteBit(GPIOA, GPIO_Pin_4, Bit_SET);
@@ -203,7 +204,7 @@ uint8_t MFRC522_PICC_Communication(uint8_t command, uint8_t xIRq, uint8_t *sendV
 		MFRC522_SetRegisterBitMask(BitFramingReg, 0x80);
 	}
 	
-	startTimeOutMs(25); // Wait 25ms at the end of transmission (because we set the TAuto bit in TModeReg) for other command to complete
+	startTimeOutMs(100); // Wait 25ms at the end of transmission (because we set the TAuto bit in TModeReg) for other command to complete
 	uint8_t completed = 0;
 	uint8_t irqReg;
 	while(!(checkTimeOut()))
@@ -358,7 +359,7 @@ uint8_t MFRC522_PICC_Select(UID *uid)
 	uint8_t rxAlign;                // Used in BitFramingReg. Defines the bit position for the first bit received
 	uint8_t txLastBits;             // Used in BitFramingReg. The number of valid bits in the last transmitted byte.
 	uint8_t uidIndex;               // Index in uid->uidByte[uidIndex] that is used in the current Cascade level
-	uint8_t currentLvlKnownBits;    // The number of known UID bits in the current Cascade Level
+	int8_t currentLvlKnownBits;     // The number of known UID bits in the current Cascade Level
 	uint8_t *responseBuffer;
 	uint8_t responseLength;
 	uint8_t bufferUsed;             // The number of bytes to transfer to the FIFO.
@@ -410,7 +411,7 @@ uint8_t MFRC522_PICC_Select(UID *uid)
 		{
 			buffer[buffIndex++] = 0x88; // Cascade tag, check Annex A for sample communication with Cascade tag
 		}
-		uint8_t bytesToCopy = currentLvlKnownBits / 8;
+		uint8_t bytesToCopy = currentLvlKnownBits / 8 + (currentLvlKnownBits % 8 ? 1 : 0);
 		if(bytesToCopy)
 		{
 			uint8_t maxByte = useCascadeTag ? 3 : 4; // Max 4 bytes of UID in each Cascade Level. Only 3 bytes of UID left if we use the Cascade Tag
@@ -472,6 +473,7 @@ uint8_t MFRC522_PICC_Select(UID *uid)
 			
 			// Transmit the buffer and receive the response
 			result = MFRC522_PICC_TransceiveData(buffer, &bufferUsed, responseBuffer, &responseLength, &txLastBits, rxAlign);
+			
 			if(result == 3) // More than one PICC in the field => collision error
 			{
 				uint8_t valueOfCollReg = MFRC522_ReadByteReg(CollReg); // CollReg[7..0] bits are: ValuesAfterColl reserved CollPosNotValid CollPos[4:0]
@@ -573,8 +575,8 @@ uint8_t MFRC522_PICC_IsNewCardPresent(void)
 	MFRC522_WriteByteReg(TxModeReg, 0x00);
 	MFRC522_WriteByteReg(RxModeReg, 0x00);
 	MFRC522_WriteByteReg(ModWidthReg, 0x26);
-	
-	return MFRC522_PICC_RequestA(bufferATQA, &bufferSize);
+	uint8_t status = MFRC522_PICC_RequestA(bufferATQA, &bufferSize);
+	return status;
 }
 
 
