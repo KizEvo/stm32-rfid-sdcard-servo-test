@@ -114,13 +114,19 @@ uint8_t MFRC522_CalculateCRC(uint8_t *valueStream, uint8_t streamLen, uint8_t *r
 uint8_t MFRC522_ReadByteReg(uint8_t regAddr);
 void MFRC522_ReadStreamReg(uint8_t regAddr, uint8_t *valueStream, uint8_t streamLen);
 // PCD to PICC (contactless card) communication function prototypes
-uint8_t MFRC522_PICC_Communication(uint8_t command, uint8_t xIRq, uint8_t *sendValStream, uint8_t *sendValLen, uint8_t *receiveValStream, uint8_t *receiveValLen, uint8_t *validBits, uint8_t rxAlign);
-uint8_t MFRC522_PICC_TransceiveData(uint8_t *sendValStream, uint8_t *sendValLen, uint8_t *receiveValStream, uint8_t *receiveValLen, uint8_t *validBits, uint8_t rxAlign);
+uint8_t MFRC522_PICC_Communication(uint8_t command, uint8_t xIRq, uint8_t *sendValStream, uint8_t *sendValLen, uint8_t *receiveValStream, uint8_t *receiveValLen, uint8_t *validBits, uint8_t rxAlign, uint8_t checkCRC);
+uint8_t MFRC522_PICC_TransceiveData(uint8_t *sendValStream, uint8_t *sendValLen, uint8_t *receiveValStream, uint8_t *receiveValLen, uint8_t *validBits, uint8_t rxAlign, uint8_t checkCRC);
 uint8_t MFRC522_PICC_RequestA(uint8_t *bufferATQA, uint8_t *bufferSize);
 uint8_t MFRC522_PICC_Select(UID *uid);
 uint8_t MFRC522_PICC_IsNewCardPresent(void);
 uint8_t MFRC522_PICC_SelectCard(UID *mfrc522);
+uint8_t MFRC522_PICC_Authent(uint8_t command, uint8_t blockAddr, uint8_t *sectorKeys, UID *mfrc522);
+uint8_t MFRC522_PICC_MIFARE_Read(uint8_t blockAddr, uint8_t *buffer, uint8_t *bufferSize);
+uint8_t MFRC522_PICC_MIFARE_Write(uint8_t blockAddr, uint8_t *buffer, uint8_t bufferSize);
+uint8_t MFRC522_PICC_MIFARE_Tranceive(uint8_t *sendData, uint8_t sendLen, uint8_t acceptTimeout);
+void MFRC522_PICC_StopCrypto(void);
 void MFRC522_PICC_TestSignal(uint8_t *bufferOut);
+void MFRC522_DumpUID(UID *uid);
 PICC_TYPE MFRC522_GetType(uint8_t sak);
 
 #endif

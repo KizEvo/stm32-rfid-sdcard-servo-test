@@ -14,6 +14,7 @@
 #include "spi.h"
 #include "tim.h"
 #include "stm32f10x.h"
+#include "uart.h"
 
 // Define the required address byte format Section 8.1.2.3
 #define MFRC522_ADDRESS_BYTE_FORMAT(mode, address) ((uint8_t)(((mode) | ((address) << 1)) & 0xFE))
@@ -186,7 +187,7 @@ void MFRC522_ClearRegisterBitMask(uint8_t regAddr, uint8_t bitmask)
  * rxAlign : used for reception of bit-oriented frames: defines the bit position for the first bit received to be stored in the FIFO buffer
  *============================================================================
  */
-uint8_t MFRC522_PICC_Communication(uint8_t command, uint8_t xIRq, uint8_t *sendValStream, uint8_t *sendValLen, uint8_t *receiveValStream, uint8_t *receiveValLen, uint8_t *validBits, uint8_t rxAlign)
+uint8_t MFRC522_PICC_Communication(uint8_t command, uint8_t xIRq, uint8_t *sendValStream, uint8_t *sendValLen, uint8_t *receiveValStream, uint8_t *receiveValLen, uint8_t *validBits, uint8_t rxAlign, uint8_t checkCRC)
 {
 	// Prepare values for BitFramingReg
 	uint8_t txLastBits = validBits ? *validBits : 0;
@@ -259,7 +260,27 @@ uint8_t MFRC522_PICC_Communication(uint8_t command, uint8_t xIRq, uint8_t *sendV
 	}
 	
 	// Perform no CRC check
-	
+	if(receiveValStream && receiveValLen && checkCRC)
+	{
+		if(*receiveValLen == 1 && validBitsReceived == 4)
+		{
+			return 4;
+		}
+		if(*receiveValLen < 2 || validBitsReceived != 0)
+		{
+			return 5;
+		}
+		uint8_t controlBuffer[2];
+		uint8_t status = MFRC522_CalculateCRC(&receiveValStream[0], *receiveValLen - 2, &controlBuffer[0]);
+		if(status != UINT8_MAX)
+		{
+			return status;
+		}
+		if ((receiveValStream[*receiveValLen - 2] != controlBuffer[0]) || (receiveValStream[*receiveValLen - 1] != controlBuffer[1])) 
+		{
+			return 6;
+		}
+	}
 	return UINT8_MAX; // Success
 }
 
@@ -270,10 +291,10 @@ uint8_t MFRC522_PICC_Communication(uint8_t command, uint8_t xIRq, uint8_t *sendV
  *
  *============================================================================
  */
-uint8_t MFRC522_PICC_TransceiveData(uint8_t *sendValStream, uint8_t *sendValLen, uint8_t *receiveValStream, uint8_t *receiveValLen, uint8_t *validBits, uint8_t rxAlign)
+uint8_t MFRC522_PICC_TransceiveData(uint8_t *sendValStream, uint8_t *sendValLen, uint8_t *receiveValStream, uint8_t *receiveValLen, uint8_t *validBits, uint8_t rxAlign, uint8_t checkCRC)
 {
 	uint8_t xIRq = 0x30; // RxIRq and IdleIRq
-	return MFRC522_PICC_Communication(Transceive, xIRq, sendValStream, sendValLen, receiveValStream, receiveValLen, validBits, rxAlign);
+	return MFRC522_PICC_Communication(Transceive, xIRq, sendValStream, sendValLen, receiveValStream, receiveValLen, validBits, rxAlign, checkCRC);
 }
 
 /*============================================================================
@@ -294,7 +315,7 @@ uint8_t MFRC522_PICC_RequestA(uint8_t *bufferATQA, uint8_t *bufferSize)
 	}
 	
 	MFRC522_ClearRegisterBitMask(CollReg, 0x80);
-	uint8_t status = MFRC522_PICC_TransceiveData(&sendValStream, &sendValLen, bufferATQA, bufferSize, &validBits, 0);
+	uint8_t status = MFRC522_PICC_TransceiveData(&sendValStream, &sendValLen, bufferATQA, bufferSize, &validBits, 0, 0);
 	
 	if (status != UINT8_MAX)
 	{
@@ -342,6 +363,7 @@ uint8_t MFRC522_CalculateCRC(uint8_t *valueStream, uint8_t streamLen, uint8_t *r
 /*============================================================================
  *
  * Transmits SELECT/ANTICOLLISION commands to select a single PICC.
+ * You have to issue REQA command before using this function
  * Take a loot of the Annex A, Communication example Type A ISO-IEC 14443-3
  *
  *============================================================================
@@ -472,7 +494,7 @@ uint8_t MFRC522_PICC_Select(UID *uid)
 			MFRC522_WriteByteReg(BitFramingReg, (rxAlign << 4) | txLastBits); // rxAlign = BitFramingReg[6..4]. txLastBits = BitFramingReg[2..0]
 			
 			// Transmit the buffer and receive the response
-			result = MFRC522_PICC_TransceiveData(buffer, &bufferUsed, responseBuffer, &responseLength, &txLastBits, rxAlign);
+			result = MFRC522_PICC_TransceiveData(buffer, &bufferUsed, responseBuffer, &responseLength, &txLastBits, rxAlign, 0);
 			
 			if(result == 3) // More than one PICC in the field => collision error
 			{
@@ -592,6 +614,190 @@ uint8_t MFRC522_PICC_IsNewCardPresent(void)
 uint8_t MFRC522_PICC_SelectCard(UID *mfrc522)
 {
 	return MFRC522_PICC_Select(mfrc522);
+}
+
+/*============================================================================
+ *
+ * Enable a secure communication to any MIFARE Mini, MIFARE 1K and MIFARE 4K card
+ * Before using this function, you have to SELECT a PICC to get the UID
+ * To SELECT a PICC, issue a REQA command then do anticollision loop then SELECT the desired PICC.
+ *
+ *============================================================================
+ */
+uint8_t MFRC522_PICC_Authent(uint8_t command, uint8_t blockAddr, uint8_t *sectorKeys, UID *mfrc522)
+{
+	
+	uint8_t waitIRq = 0x10; // IdleIRq register, termination criteria because when authentication failed it does not automatically terminate the cmd
+	
+	uint8_t buffer[12]; // 10.3.1.9, a total of 12 bytes are written to the FIFO
+	uint8_t bufferLen = sizeof(buffer);
+	buffer[0] = command; // Authentication command code, either 0x60 (Key A) or 0x61 (Key B)
+	buffer[1] = blockAddr;
+	// Put sector keys to buffer
+	for(uint8_t i = 2; i < 8; i++)
+	{
+		buffer[i] = sectorKeys[i - 2];
+	}
+	// Put card serial number (UID) to buffer
+	for(uint8_t i = 8; i < 12; i++)
+	{
+		buffer[i] = mfrc522->uidByte[i - 8];
+	}
+	MFRC522_PICC_Communication(MFAuthent, waitIRq, buffer, &bufferLen, NULL, NULL, NULL, 0, 0);
+	return UINT8_MAX;
+}
+
+/*============================================================================
+ *
+ * Clear MFCrypto1On bit in Status2Reg, should be used if you want to exit MIFARE secure communication
+ * You enter a secure communication by using MFRC522_PICC_Authent(...) function;
+ *
+ *============================================================================
+ */
+void MFRC522_PICC_StopCrypto(void)
+{
+	MFRC522_ClearRegisterBitMask(Status2Reg, 0x08); /*Clear MFCrypto1On bit*/
+}
+
+
+/*============================================================================
+ *
+ * Read 16 bytes + 2 bytes CRC_A from the active PICC
+ * For MIFARE Classic the sector containing the block must be authenticated before calling this function.
+ * The buffer must be at least 18 bytes because a CRC_A is also returned.
+ * Checks the CRC_A before returning STATUS_OK.
+ * uint8_t blockAddr (00h to FFh)
+ *============================================================================
+ */
+uint8_t MFRC522_PICC_MIFARE_Read(uint8_t blockAddr, uint8_t *buffer, uint8_t *bufferSize)
+{
+	uint8_t result;
+	
+	if(buffer == NULL || *bufferSize < 18)
+	{
+		return 0;
+	}
+	
+	buffer[0] = 0x30; // https://www.nxp.com/docs/en/data-sheet/MF1S50YYX_V1.pdf - Section 12.2
+	buffer[1] = blockAddr;
+	// Calculate CRC
+	result = MFRC522_CalculateCRC(buffer, 2, &buffer[2]);
+	if (result != UINT8_MAX)
+	{
+		return result; // Error while calculating CRC
+	}
+	uint8_t sendBuffSize = 4;
+	return MFRC522_PICC_TransceiveData(buffer, &sendBuffSize, buffer, bufferSize, NULL, 0, 1);
+}
+
+
+/*============================================================================
+ *
+ * Write 16 bytes + 2 to the active PICC
+ * For MIFARE Classic the sector containing the block must be authenticated before calling this function.
+ * The buffer must be at least 18 bytes because a CRC_A is also returned.
+ * Checks the CRC_A before returning STATUS_OK.
+ * uint8_t blockAddr(00h to FFh)
+ *============================================================================
+ */
+uint8_t MFRC522_PICC_MIFARE_Write(uint8_t blockAddr, uint8_t *buffer, uint8_t bufferSize)
+{
+	uint8_t result;
+	
+	if(buffer == NULL || bufferSize < 16)
+	{
+		return 0;
+	}
+	
+	// MIFARE Classic protocol requires two communications to perform a write.
+	// Step1 tell the PICC we want to write to block "blockAddr"
+	uint8_t commandBuffer[2];
+	commandBuffer[0] = 0xA0; // https://www.nxp.com/docs/en/data-sheet/MF1S50YYX_V1.pdf - Section 12.3
+	commandBuffer[1] = blockAddr;
+	result = MFRC522_PICC_MIFARE_Tranceive(commandBuffer, 2, 0);
+	if(result != UINT8_MAX)
+	{
+		return result;
+	}
+	
+	// Step2 transfer the data
+	result = MFRC522_PICC_MIFARE_Tranceive(buffer, bufferSize, 0);
+	if(result != UINT8_MAX)
+	{
+		return result;
+	}
+	return UINT8_MAX;
+}
+
+/*============================================================================
+ *
+ * Wrapper for MIFARE protocol communication
+ * Adds CRC_A, executes the Transceive command and checks that the response is MF_ACK or a timeout. 
+ *
+ *============================================================================
+ */
+uint8_t MFRC522_PICC_MIFARE_Tranceive(uint8_t *sendData, uint8_t sendLen, uint8_t acceptTimeout)
+{
+	uint8_t result;
+	uint8_t commandBuffer[18]; // 16 bytes data and 2 bytes CRC_A
+	if(sendData == NULL || sendLen > 16)
+	{
+		return 0;
+	}
+	for(uint8_t i = 0; i < sendLen; i++) // Copy sendData to commandBuffer
+	{
+		commandBuffer[i] = sendData[i];
+	}
+	result = MFRC522_CalculateCRC(commandBuffer, sendLen, &commandBuffer[sendLen]);
+	if(result != UINT8_MAX)
+	{
+		return result;
+	}
+	sendLen += 2;
+	
+	// Transceive data, store reply in commandBuffer[]
+	uint8_t waitIRq = 0x30;
+	uint8_t commandBufferSize = sizeof(commandBuffer);
+	uint8_t validBits = 0;
+	result = MFRC522_PICC_Communication(Transceive, waitIRq, commandBuffer, &sendLen, commandBuffer, &commandBufferSize, &validBits, 0, 0);
+	if(acceptTimeout && result == 0)
+	{
+		return UINT8_MAX;
+	}
+	if(result != UINT8_MAX)
+	{
+		return result;
+	}
+	// The PICC must reply with a 4 bit ACK
+	if(commandBufferSize != 1 || validBits != 4)
+	{
+		return 1; // ERROR
+	}
+	if(commandBuffer[0] != 0xA)
+	{
+		return 2; // MIFARE NACK
+	}
+	return UINT8_MAX; // Success
+}
+
+/*============================================================================
+ *
+ * Dump card UID to UART
+ *
+ *============================================================================
+ */
+void MFRC522_DumpUID(UID *mfrc522)
+{
+	UART_WriteString(USART1, "UID (in hex): ");
+	for(uint8_t i = 0; i < mfrc522->size; i++)
+	{
+		UART_WriteHex(USART1, mfrc522->uidByte[i]);
+		UART_WriteString(USART1, " ");
+	}
+	UART_WriteString(USART1, "         ");
+	UART_WriteString(USART1, "MIFARE type: ");
+	UART_WriteHex(USART1, mfrc522->sak);
+	UART_WriteString(USART1, "         ");
 }
 
 /*============================================================================

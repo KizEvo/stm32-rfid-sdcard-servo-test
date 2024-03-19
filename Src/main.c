@@ -40,23 +40,17 @@ int main(void)
 	GPIO_WriteBit(GPIOC, ledRed.GPIO_Pin, Bit_RESET);	
 	
 	UID mfrc522 = {};
-	volatile uint8_t check = 0;
+	uint8_t command = 0x60; // Key A
+	uint8_t blockAddr = 0x4; // Block 4
+	uint8_t sectorKeys[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	while(1)
 	{
 		if(MFRC522_PICC_IsNewCardPresent() == UINT8_MAX)
 		{
 				if(MFRC522_PICC_Select(&mfrc522) == UINT8_MAX)
 				{
-					UART_WriteString(USART1, "UID (in decimal): ");
-					for(uint8_t i = 0; i < mfrc522.size; i++)
-					{
-						UART_WriteNumberInt(USART1, mfrc522.uidByte[i]);
-						UART_WriteString(USART1, " ");
-					}
-					UART_WriteString(USART1, "                  ");
-					UART_WriteString(USART1, "Size: ");
-					UART_WriteNumberInt(USART1, mfrc522.size);
-					UART_WriteString(USART1, "                  ");
+					// Dump card UID
+					MFRC522_DumpUID(&mfrc522);
 				}
 		}
 	}
