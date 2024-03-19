@@ -13,6 +13,7 @@
 
 static uint8_t getNumberLength(int32_t x);
 static uint32_t getTenMultiplier(uint8_t x);
+static char numbToHexChar(uint8_t numb);
 
 /* ============================================================================
  *
@@ -108,6 +109,63 @@ void UART_WriteNumberInt(USART_TypeDef *USARTx, int32_t numb)
 	UART_WriteString(USARTx, string);
 }
 
+/* ============================================================================
+ *
+ * Transmit a string on the serial line in hex format
+ * 
+ * ============================================================================
+ */
+void UART_WriteHex(USART_TypeDef *USARTx, int32_t numb)
+{
+	char string[10];
+	uint8_t i = 0;
+	while(numb > 0)
+	{
+		string[i] = numbToHexChar(numb & 0xF);
+		numb = numb >> 4;
+		i += 1;
+	}
+	if(i == 1) string[i++] = '0';
+	for(int8_t r = i - 1; r >= 0; r--)
+	{
+		UART_TransmitByte(USART1, string[r]);
+		if(r % 2 == 0) UART_TransmitByte(USART1, ' ');
+	}
+}
+
+
+/* ============================================================================
+ *
+ * Convert byte to char in hex format
+ * 
+ * ============================================================================
+ */
+static char numbToHexChar(uint8_t numb)
+{
+	switch(numb & 0xF)
+	{
+		case 0:
+		case 1:
+		case 2:
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+		case 8:
+		case 9:
+			return numb + '0';
+		case 10:
+		case 11:
+		case 12:
+		case 13:
+		case 14:
+		case 15:
+			return (numb % 10) + 'A';
+		default:
+			return 'Z';
+	}	
+}
 
 /* ============================================================================
  *
